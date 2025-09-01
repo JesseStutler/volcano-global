@@ -31,6 +31,7 @@ spec:
             - name: webhook-config
               mountPath: /etc/kubeconfig
               readOnly: true
+      serviceAccountName: volcano-global-controller-manager
       volumes:
         - name: webhook-config
           secret:

@@ -76,6 +76,9 @@ export KUBECONFIG=$HOME/.kube/karmada.config
 # Create volcano-global namespace first in karmada APIServer to used by leader election.
 kubectl --context karmada-apiserver apply -f docs/deploy/volcano-global-namespace.yaml
 
+# Apply the rbac configuration.
+kubectl --context karmada-host apply -f docs/deploy/volcano-global-rbac.yaml
+
 # Apply the component deployment yaml.
 kubectl --context karmada-host apply -f docs/deploy/volcano-global-namespace.yaml
 kubectl --context karmada-host apply -f docs/deploy/volcano-global-controller-manager.yaml
