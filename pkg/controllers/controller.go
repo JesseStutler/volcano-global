@@ -28,14 +28,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	batchv1alpha2 "volcano.sh/apis/pkg/apis/batch/v1alpha2"
 	"volcano.sh/volcano/pkg/controllers/framework"
+
+	initializescheme "volcano.sh/volcano-global/pkg/controllers/scheme"
+	// Import all controllers to register them.
+	_ "volcano.sh/volcano-global/pkg/controllers/split"
 )
 
 var (
 	scheme = runtime.NewScheme()
-	// ReconcilerInitializers is a global map of reconciler initializers.
-	// Reconcilers should add their init functions to this map in their own init() functions.
-	// The key is the name of the reconciler
-	ReconcilerInitializers = make(map[string]AddToManagerFunc)
 )
 
 const ControllerName = "controller"
@@ -46,9 +46,6 @@ func init() {
 
 	utilruntime.Must(framework.RegisterController(&Controller{}))
 }
-
-// AddToManagerFunc defines a function type for initializing a new reconciler and adding it to a manager.
-type AddToManagerFunc func(ctrl.Manager) error
 
 // Controller is the shared controller manager to manage all reconcilers written by controller-runtime framework in volcano-global.
 type Controller struct {
@@ -73,7 +70,7 @@ func (sc *Controller) Initialize(opt *framework.ControllerOption) error {
 	}
 	sc.mgr = mgr
 
-	for name, initFn := range ReconcilerInitializers {
+	for name, initFn := range initializescheme.ReconcilerInitializers {
 		//TODO: we can add an enabledSet to filter the reconcilers to be initialized.
 		if err = initFn(mgr); err != nil {
 			return fmt.Errorf("failed to add reconciler %s to shared controller manager: %w", name, err)

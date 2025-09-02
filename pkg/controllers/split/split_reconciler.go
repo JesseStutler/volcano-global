@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	batchv1alpha2 "volcano.sh/apis/pkg/apis/batch/v1alpha2"
 
-	"volcano.sh/volcano-global/pkg/controllers"
+	"volcano.sh/volcano-global/pkg/controllers/scheme"
 )
 
 const (
@@ -40,7 +40,7 @@ const (
 )
 
 func init() {
-	controllers.ReconcilerInitializers[ReconcilerName] = InitSplitReconciler
+	scheme.ReconcilerInitializers[ReconcilerName] = InitSplitReconciler
 }
 
 // SplitReconciler creates the corresponding number of vcjob and pp based on HyperJob, and aggregates the status of child vcjobs to HyperJob
