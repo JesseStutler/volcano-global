@@ -109,5 +109,5 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.33.1
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.33.1
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.33.1
-	volcano.sh/apis => github.com/JesseStutler/apis v0.0.0-20250901033612-837ef3be9be9
+	volcano.sh/apis => github.com/JesseStutler/apis v0.0.0-20250902125726-2efeddd93b5f
 )

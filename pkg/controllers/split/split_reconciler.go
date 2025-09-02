@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	batchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	batchv1alpha2 "volcano.sh/apis/pkg/apis/batch/v1alpha2"
 
 	"volcano.sh/volcano-global/pkg/controllers/scheme"
@@ -65,7 +66,7 @@ func NewSplitReconciler(client client.Client, scheme *runtime.Scheme) *SplitReco
 func (s *SplitReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&batchv1alpha2.HyperJob{}).
-		Owns(&batchv1alpha2.Job{}).
+		Owns(&batchv1alpha1.Job{}).
 		Owns(&policyv1alpha1.PropagationPolicy{}).
 		Complete(s)
 }
@@ -97,7 +98,7 @@ func (s *SplitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (s *SplitReconciler) syncVCJobAndPP(ctx context.Context, hyperJob *batchv1alpha2.HyperJob) error {
-	childVCJobs := &batchv1alpha2.JobList{}
+	childVCJobs := &batchv1alpha1.JobList{}
 	selector := client.MatchingLabels(map[string]string{
 		HyperJobNameLabelKey: hyperJob.Name,
 	})
@@ -105,7 +106,7 @@ func (s *SplitReconciler) syncVCJobAndPP(ctx context.Context, hyperJob *batchv1a
 		klog.Errorf("Failed to list child VCJobs for HyperJob %s/%s: %v", hyperJob.Namespace, hyperJob.Name, err)
 		return err
 	}
-	childVCJobMap := make(map[string]batchv1alpha2.Job)
+	childVCJobMap := make(map[string]batchv1alpha1.Job)
 	for _, job := range childVCJobs.Items {
 		childVCJobMap[job.Name] = job
 	}
@@ -195,8 +196,8 @@ func (s *SplitReconciler) syncVCJobAndPP(ctx context.Context, hyperJob *batchv1a
 	return nil
 }
 
-func (s *SplitReconciler) constructDesiredVCJob(hyperJob *batchv1alpha2.HyperJob, replicatedJob *batchv1alpha2.ReplicatedJob, jobName string) (*batchv1alpha2.Job, error) {
-	desiredVCJob := &batchv1alpha2.Job{
+func (s *SplitReconciler) constructDesiredVCJob(hyperJob *batchv1alpha2.HyperJob, replicatedJob *batchv1alpha2.ReplicatedJob, jobName string) (*batchv1alpha1.Job, error) {
+	desiredVCJob := &batchv1alpha1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      jobName,
 			Namespace: hyperJob.Namespace,
@@ -252,7 +253,7 @@ func (s *SplitReconciler) constructDesiredPP(hyperJob *batchv1alpha2.HyperJob, p
 }
 
 func (s *SplitReconciler) syncVCJobStatus(ctx context.Context, hyperJob *batchv1alpha2.HyperJob) error {
-	childVCJobs := &batchv1alpha2.JobList{}
+	childVCJobs := &batchv1alpha1.JobList{}
 	selector := client.MatchingLabels(map[string]string{
 		HyperJobNameLabelKey: hyperJob.Name,
 	})
