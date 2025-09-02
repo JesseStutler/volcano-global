@@ -36,6 +36,7 @@ import (
 
 	dispatcheroptions "volcano.sh/volcano-global/pkg/dispatcher/options"
 
+	_ "volcano.sh/volcano-global/pkg/controllers"
 	_ "volcano.sh/volcano-global/pkg/dispatcher"
 	_ "volcano.sh/volcano/pkg/controllers/garbagecollector"
 )
