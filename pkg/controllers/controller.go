@@ -89,6 +89,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 
 	ctx := wait.ContextForChannel(stopCh)
 	if err := c.mgr.Start(ctx); err != nil {
-		klog.Errorf("Shared controller manager stopped with error: %v", err)
+		klog.Fatalf("Shared controller manager stopped with error: %v", err)
 	}
 }
