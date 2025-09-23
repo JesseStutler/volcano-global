@@ -32,18 +32,12 @@ import (
 	batchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	trainingv1alpha1 "volcano.sh/apis/pkg/apis/training/v1alpha1"
 
+	"volcano.sh/volcano-global/pkg/controllers/hyperjob/utils"
 	"volcano.sh/volcano-global/pkg/controllers/scheme"
 )
 
 const (
-	HyperJobNameLabelKey = "volcano.sh/hyperjob-name"
-	// ReplicatedJobNameLabelKey is used to identify which ReplicatedJob a VCJob belongs to.
-	// It is convenient for controller to query the replicatedJob a VCJob belongs to and aggregate status
-	ReplicatedJobNameLabelKey = "volcano.sh/replicatedjob-name"
-	// Labels for storing the hash of the user's original vcjob templateSpec/ppSpec
-	VCJobTemplateSpecHashLabelKey = "volcano.sh/vcjob-template-spec-hash"
-	PPSpecHashLabelKey            = "volcano.sh/pp-spec-hash"
-	ReconcilerName                = "hyperjob-controller"
+	ReconcilerName = "hyperjob-controller"
 )
 
 func init() {
@@ -93,6 +87,15 @@ func (h *HyperJobController) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
+	// Plugins of OnHyperJobAdd are only executed once upon HyperJob creation.
+	if hyperJob.Status.ObservedGeneration == 0 {
+		if err := h.pluginOnHyperJobAdd(ctx, hyperJob); err != nil {
+			log.Error(err, "Failed to execute OnHyperJobAdd plugins")
+			h.Recorder.Eventf(hyperJob, "Warning", "PluginError", "Failed to execute OnHyperJobAdd plugins: %v", err)
+			return ctrl.Result{}, err
+		}
+	}
+
 	var splitCount int32
 	var err error
 	if hyperJob.Generation != hyperJob.Status.ObservedGeneration {
@@ -123,7 +126,7 @@ func (h *HyperJobController) syncVCJobAndPP(ctx context.Context, hyperJob *train
 
 	childVCJobs := &batchv1alpha1.JobList{}
 	selector := client.MatchingLabels(map[string]string{
-		HyperJobNameLabelKey: hyperJob.Name,
+		utils.HyperJobNameLabelKey: hyperJob.Name,
 	})
 	if err = h.List(ctx, childVCJobs, client.InNamespace(hyperJob.Namespace), selector); err != nil {
 		log.Error(err, "Failed to list child VCJobs for HyperJob")
@@ -163,6 +166,10 @@ func (h *HyperJobController) syncVCJobAndPP(ctx context.Context, hyperJob *train
 			}
 
 			if existingVCJob, exists := childVCJobMap[jobName]; !exists {
+				if err = h.pluginOnJobCreate(ctx, hyperJob, desiredVCJob); err != nil {
+					log.Error(err, "Failed to execute plugins for VCJob before creation")
+					return 0, err
+				}
 				if err = h.Create(ctx, desiredVCJob); err != nil {
 					h.Recorder.Eventf(hyperJob, "Warning", "FailedCreateVCJob",
 						"Failed to create VCJob %s: %v", desiredVCJob.Name, err)
@@ -180,7 +187,7 @@ func (h *HyperJobController) syncVCJobAndPP(ctx context.Context, hyperJob *train
 					log.V(4).Info("Updating existing VolcanoJob", "VCJob.Name", jobName, "VCJob.Namespace", desiredVCJob.Namespace)
 					existingVCJob.Spec = desiredVCJob.Spec
 					if existingVCJob.Labels != nil {
-						existingVCJob.Labels[VCJobTemplateSpecHashLabelKey] = desiredVCJob.Labels[VCJobTemplateSpecHashLabelKey]
+						existingVCJob.Labels[utils.VCJobTemplateSpecHashLabelKey] = desiredVCJob.Labels[utils.VCJobTemplateSpecHashLabelKey]
 					}
 					if err = h.Update(ctx, &existingVCJob); err != nil {
 						h.Recorder.Eventf(hyperJob, "Warning", "FailedUpdateVCJob",
@@ -215,7 +222,7 @@ func (h *HyperJobController) syncVCJobAndPP(ctx context.Context, hyperJob *train
 					log.V(4).Info("Updating existing PropagationPolicy", "PP.Name", ppName, "PP.Namespace", desiredPP.Namespace)
 					existingPP.Spec = desiredPP.Spec
 					if existingPP.Labels != nil {
-						existingPP.Labels[PPSpecHashLabelKey] = desiredPP.Labels[PPSpecHashLabelKey]
+						existingPP.Labels[utils.PPSpecHashLabelKey] = desiredPP.Labels[utils.PPSpecHashLabelKey]
 					}
 					if err = h.Update(ctx, &existingPP); err != nil {
 						h.Recorder.Eventf(hyperJob, "Warning", "FailedUpdatePP",
@@ -261,9 +268,9 @@ func (h *HyperJobController) constructDesiredVCJob(hyperJob *trainingv1alpha1.Hy
 			Name:      jobName,
 			Namespace: hyperJob.Namespace,
 			Labels: map[string]string{
-				HyperJobNameLabelKey:          hyperJob.Name,
-				ReplicatedJobNameLabelKey:     replicatedJob.Name,
-				VCJobTemplateSpecHashLabelKey: templateSpecHash,
+				utils.HyperJobNameLabelKey:          hyperJob.Name,
+				utils.ReplicatedJobNameLabelKey:     replicatedJob.Name,
+				utils.VCJobTemplateSpecHashLabelKey: templateSpecHash,
 			},
 			Annotations: make(map[string]string),
 		},
@@ -283,7 +290,7 @@ func (h *HyperJobController) constructDesiredPP(hyperJob *trainingv1alpha1.Hyper
 			Name:      ppName,
 			Namespace: hyperJob.Namespace,
 			Labels: map[string]string{
-				HyperJobNameLabelKey: hyperJob.Name,
+				utils.HyperJobNameLabelKey: hyperJob.Name,
 			},
 			Annotations: make(map[string]string),
 		},
@@ -319,7 +326,7 @@ func (h *HyperJobController) constructDesiredPP(hyperJob *trainingv1alpha1.Hyper
 	}
 
 	ppSpecHash := ComputePPSpecHash(&desiredPP.Spec)
-	desiredPP.Labels[PPSpecHashLabelKey] = ppSpecHash
+	desiredPP.Labels[utils.PPSpecHashLabelKey] = ppSpecHash
 
 	if err := controllerutil.SetControllerReference(hyperJob, desiredPP, h.Scheme); err != nil {
 		return nil, err
@@ -341,8 +348,8 @@ func (h *HyperJobController) syncHyperJobStatus(ctx context.Context, hyperJob *t
 	for _, replicatedJob := range hyperJob.Spec.ReplicatedJobs {
 		childVCJobs := &batchv1alpha1.JobList{}
 		selector := client.MatchingLabels(map[string]string{
-			HyperJobNameLabelKey:      hyperJob.Name,
-			ReplicatedJobNameLabelKey: replicatedJob.Name,
+			utils.HyperJobNameLabelKey:      hyperJob.Name,
+			utils.ReplicatedJobNameLabelKey: replicatedJob.Name,
 		})
 		if err := h.List(ctx, childVCJobs, client.InNamespace(hyperJob.Namespace), selector); err != nil {
 			log.Error(err, "Failed to list child VCJobs for HyperJob")

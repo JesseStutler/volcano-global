@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	batchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	trainingv1alpha1 "volcano.sh/apis/pkg/apis/training/v1alpha1"
+	"volcano.sh/volcano-global/pkg/controllers/hyperjob/utils"
 )
 
 func setupTestController() (*HyperJobController, client.Client) {
@@ -106,8 +107,8 @@ func createTestVCJob(name, namespace, hyperJobName, replicatedJobName string, st
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				HyperJobNameLabelKey:      hyperJobName,
-				ReplicatedJobNameLabelKey: replicatedJobName,
+				utils.HyperJobNameLabelKey:      hyperJobName,
+				utils.ReplicatedJobNameLabelKey: replicatedJobName,
 			},
 		},
 		Status: status,
@@ -123,9 +124,9 @@ func expectedVCJob(name, namespace, hyperJobName, replicatedJobName string, spec
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				HyperJobNameLabelKey:          hyperJobName,
-				ReplicatedJobNameLabelKey:     replicatedJobName,
-				VCJobTemplateSpecHashLabelKey: templateSpecHash,
+				utils.HyperJobNameLabelKey:          hyperJobName,
+				utils.ReplicatedJobNameLabelKey:     replicatedJobName,
+				utils.VCJobTemplateSpecHashLabelKey: templateSpecHash,
 			},
 		},
 		Spec: spec,
@@ -139,7 +140,7 @@ func expectedPP(name, namespace, hyperJobName string, clusterNames []string) *po
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				HyperJobNameLabelKey: hyperJobName,
+				utils.HyperJobNameLabelKey: hyperJobName,
 			},
 		},
 		Spec: policyv1alpha1.PropagationSpec{
@@ -174,7 +175,7 @@ func expectedPP(name, namespace, hyperJobName string, clusterNames []string) *po
 	}
 
 	ppSpecHash := ComputePPSpecHash(&pp.Spec)
-	pp.Labels[PPSpecHashLabelKey] = ppSpecHash
+	pp.Labels[utils.PPSpecHashLabelKey] = ppSpecHash
 
 	return pp
 }
@@ -337,7 +338,7 @@ func TestSyncVCJobAndPP(t *testing.T) {
 
 			vcJobList := &batchv1alpha1.JobList{}
 			err = fakeClient.List(ctx, vcJobList, client.InNamespace(tt.hyperJob.Namespace),
-				client.MatchingLabels{HyperJobNameLabelKey: tt.hyperJob.Name})
+				client.MatchingLabels{utils.HyperJobNameLabelKey: tt.hyperJob.Name})
 			assert.NoError(t, err)
 
 			actualVCJobs := make([]*batchv1alpha1.Job, len(vcJobList.Items))
@@ -367,7 +368,7 @@ func TestSyncVCJobAndPP(t *testing.T) {
 
 			ppList := &policyv1alpha1.PropagationPolicyList{}
 			err = fakeClient.List(ctx, ppList, client.InNamespace(tt.hyperJob.Namespace),
-				client.MatchingLabels{HyperJobNameLabelKey: tt.hyperJob.Name})
+				client.MatchingLabels{utils.HyperJobNameLabelKey: tt.hyperJob.Name})
 			assert.NoError(t, err)
 
 			actualPPs := make([]*policyv1alpha1.PropagationPolicy, len(ppList.Items))
