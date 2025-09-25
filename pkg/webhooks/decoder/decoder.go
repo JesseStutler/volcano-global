@@ -19,6 +19,7 @@ package decoder
 import (
 	"fmt"
 
+	policyv1alpha1 "github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1"
 	workv1alpha2 "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog/v2"
+	batchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	trainingv1alpha1 "volcano.sh/apis/pkg/apis/training/v1alpha1"
 )
 
 func init() {
@@ -42,12 +45,33 @@ var codecs = serializer.NewCodecFactory(scheme)
 func addToScheme(scheme *runtime.Scheme) {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionv1.AddToScheme(scheme))
+	utilruntime.Must(trainingv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(batchv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(policyv1alpha1.AddToScheme(scheme))
 }
 
 var ResourceBindingGVR = metav1.GroupVersionResource{
 	Group:    workv1alpha2.GroupVersion.Group,
 	Version:  workv1alpha2.GroupVersion.Version,
 	Resource: workv1alpha2.ResourcePluralResourceBinding,
+}
+
+var HyperJobGVR = metav1.GroupVersionResource{
+	Group:    trainingv1alpha1.SchemeGroupVersion.Group,
+	Version:  trainingv1alpha1.SchemeGroupVersion.Version,
+	Resource: "hyperjobs",
+}
+
+var VolcanoJobGVR = metav1.GroupVersionResource{
+	Group:    batchv1alpha1.SchemeGroupVersion.Group,
+	Version:  batchv1alpha1.SchemeGroupVersion.Version,
+	Resource: "jobs",
+}
+
+var PropagationPolicyGVR = metav1.GroupVersionResource{
+	Group:    policyv1alpha1.GroupVersion.Group,
+	Version:  policyv1alpha1.GroupVersion.Version,
+	Resource: "propagationpolicies",
 }
 
 // DecodeResourceBinding decode the ResourceBinding use deserializer from the raw object.
@@ -64,4 +88,49 @@ func DecodeResourceBinding(object runtime.RawExtension, gvr metav1.GroupVersionR
 
 	klog.V(5).Infof("The ResourceBinding struct is %+v", resourceBinding)
 	return resourceBinding, nil
+}
+
+// DecodeHyperJob decodes the HyperJob from a raw object.
+func DecodeHyperJob(object runtime.RawExtension, gvr metav1.GroupVersionResource) (*trainingv1alpha1.HyperJob, error) {
+	if gvr != HyperJobGVR {
+		return nil, fmt.Errorf("expect resource to be %s", HyperJobGVR)
+	}
+
+	deserializer := codecs.UniversalDeserializer()
+	hyperJob := &trainingv1alpha1.HyperJob{}
+	if _, _, err := deserializer.Decode(object.Raw, nil, hyperJob); err != nil {
+		return nil, err
+	}
+
+	return hyperJob, nil
+}
+
+// DecodeVolcanoJob decodes the Volcano Job from a raw object.
+func DecodeVolcanoJob(object runtime.RawExtension, gvr metav1.GroupVersionResource) (*batchv1alpha1.Job, error) {
+	if gvr != VolcanoJobGVR {
+		return nil, fmt.Errorf("expect resource to be %s", VolcanoJobGVR)
+	}
+
+	deserializer := codecs.UniversalDeserializer()
+	job := &batchv1alpha1.Job{}
+	if _, _, err := deserializer.Decode(object.Raw, nil, job); err != nil {
+		return nil, err
+	}
+
+	return job, nil
+}
+
+// DecodePropagationPolicy decodes the PropagationPolicy from a raw object.
+func DecodePropagationPolicy(object runtime.RawExtension, gvr metav1.GroupVersionResource) (*policyv1alpha1.PropagationPolicy, error) {
+	if gvr != PropagationPolicyGVR {
+		return nil, fmt.Errorf("expect resource to be %s", PropagationPolicyGVR)
+	}
+
+	deserializer := codecs.UniversalDeserializer()
+	policy := &policyv1alpha1.PropagationPolicy{}
+	if _, _, err := deserializer.Decode(object.Raw, nil, policy); err != nil {
+		return nil, err
+	}
+
+	return policy, nil
 }

@@ -29,6 +29,7 @@ import (
 	"volcano.sh/volcano/cmd/webhook-manager/app/options"
 	"volcano.sh/volcano/pkg/version"
 
+	_ "volcano.sh/volcano-global/pkg/webhooks/hyperjob/validating"
 	_ "volcano.sh/volcano-global/pkg/webhooks/resourcebinding/mutating"
 	_ "volcano.sh/volcano/pkg/webhooks/admission/jobs/mutate"
 	_ "volcano.sh/volcano/pkg/webhooks/admission/jobs/validate"

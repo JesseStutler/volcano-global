@@ -71,3 +71,34 @@ webhooks:
         scope: Namespaced
     sideEffects: NoneOnDryRun
     timeoutSeconds: 10
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: volcano-admission-service-hyperjobs-validate
+webhooks:
+  - name: validatehyperjobs.volcano.sh
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      url: https://volcano-global-webhook.volcano-global.svc:443/hyperjobs/validate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["training.volcano.sh"]
+        apiVersions: ["v1alpha1"]
+        resources: ["hyperjobs"]
+        scope: "Namespaced"
+      - operations: ["UPDATE"]
+        apiGroups: ["batch.volcano.sh"]
+        apiVersions: ["v1alpha1"]
+        resources: ["jobs"]
+        scope: "Namespaced"
+      - operations: ["UPDATE"]
+        apiGroups: ["policy.karmada.io"]
+        apiVersions: ["v1alpha1"]
+        resources: ["propagationpolicies"]
+        scope: "Namespaced"
+    sideEffects: NoneOnDryRun
+    timeoutSeconds: 10
