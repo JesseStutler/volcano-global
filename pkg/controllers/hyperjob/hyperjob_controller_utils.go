@@ -27,6 +27,8 @@ import (
 	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	batchv1alpha1 "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	trainingv1alpha1 "volcano.sh/apis/pkg/apis/training/v1alpha1"
+
+	"volcano.sh/volcano-global/pkg/controllers/hyperjob/utils"
 )
 
 // Conditions list
@@ -63,7 +65,7 @@ func ComputePPSpecHash(ppSpec *policyv1alpha1.PropagationSpec) string {
 func IsVCJobTemplateSpecChanged(replicatedJob *trainingv1alpha1.ReplicatedJob, existingVCJob *batchv1alpha1.Job) bool {
 	currentHash := ComputeVCJobTemplateSpecHash(&replicatedJob.TemplateSpec)
 
-	previousHash, exists := existingVCJob.Labels[VCJobTemplateSpecHashLabelKey]
+	previousHash, exists := existingVCJob.Labels[utils.VCJobTemplateSpecHashLabelKey]
 	if !exists {
 		return true
 	}
@@ -75,7 +77,7 @@ func IsVCJobTemplateSpecChanged(replicatedJob *trainingv1alpha1.ReplicatedJob, e
 func IsPPSpecChanged(desiredPP *policyv1alpha1.PropagationPolicy, existingPP *policyv1alpha1.PropagationPolicy) bool {
 	currentHash := ComputePPSpecHash(&desiredPP.Spec)
 
-	previousHash, exists := existingPP.Labels[PPSpecHashLabelKey]
+	previousHash, exists := existingPP.Labels[utils.PPSpecHashLabelKey]
 	if !exists {
 		return true
 	}

@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	policyv1alpha1 "github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -45,6 +46,7 @@ func init() {
 	utilruntime.Must(batchv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(trainingv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(policyv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
 
 	utilruntime.Must(framework.RegisterController(&Controller{}))
 }
