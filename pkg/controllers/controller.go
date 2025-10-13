@@ -34,6 +34,7 @@ import (
 	initializescheme "volcano.sh/volcano-global/pkg/controllers/scheme"
 	// Import all controllers to register them.
 	_ "volcano.sh/volcano-global/pkg/controllers/hyperjob"
+	_ "volcano.sh/volcano-global/pkg/controllers/vcjob"
 )
 
 var (
